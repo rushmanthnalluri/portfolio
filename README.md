@@ -1,68 +1,36 @@
-# Deepthanush Chowdary — Portfolio
+# Rushmanth Nalluri — Portfolio
 
-Personal portfolio website for Deepthanush Chowdary, Computer Science & Engineering student at KL University.
+Personal portfolio website for Rushmanth Nalluri, Computer Science student at KL University building AI/ML and low-level concurrent systems.
 
 ## Live
 
-https://deepthanush.io
+- **CloudFront (HTTPS / Production):** [https://d11q7nlxxrnrn0.cloudfront.net/](https://d11q7nlxxrnrn0.cloudfront.net/)
+- **GitHub Pages:** [https://rushmanthnalluri.github.io/portfolio/](https://rushmanthnalluri.github.io/portfolio/)
+- **S3 Bucket:** `rushmanth-portfolio-site-2026` (ap-south-1)
 
 ## Features
 
-- Responsive design (mobile-first)
-- Dark / light theme toggle
-- Live age counter with millisecond precision
-- GitHub contributions graph (fetched via local proxy)
-- Open source repos (auto-fetched from GitHub API)
-- Skill category filtering with staggered animations
-- Cloudflare Turnstile verification on load
+- **30-Second Recruiter Visual Hierarchy:** Immediate clarity on technical competencies and systems/ML projects.
+- **Featured Projects:** Hand-crafted, hardcoded architecture cards with real benchmarks (PropPulse, CopyFast, TaskForge, Placement Predict).
+- **Curated Certifications:** Featured Stanford, UC San Diego, DeepLearning.AI, and AWS credentials.
+- **Skills Matrix:** Categorized filters (AI/ML, Systems, Languages, Backend/Cloud, Tools/Testing).
+- **Verified GitHub Activity:** Responsive contribution calendar with timeout and graceful offline/error fallback.
+- **Single-File Self-Contained:** Fully inlined CSS, JS, and institutional logos as base64 data URIs for instant loading and zero CDN image dependencies.
+- **Dark / Light Mode:** Instant theme toggle with local storage persistence.
 
 ## Tech Stack
 
 - HTML5, CSS3, JavaScript (vanilla)
-- Tailwind CSS (CDN)
-- Simple Icons (CDN)
-- Vercel (deployment)
-- Python (local development server)
+- Tailwind CSS
+- CloudFront + Amazon S3 / GitHub Pages
+- Python (build and sync scripts)
 
 ## Local Development
+
+Open `index.html` directly in any web browser or serve locally:
 
 ```bash
 python server.py
 ```
 
 Then open `http://127.0.0.1:8081` in your browser.
-
-The `server.py` serves static files and provides a cached `/api/github-activity` endpoint that scrapes GitHub's official contribution graph.
-
-## Deployment
-
-```bash
-vercel --prod
-```
-
-## Project Structure
-
-```
-dev-portfolio/
-├── assets/
-│   ├── css/
-│   │   └── style.css
-│   ├── images/
-│   │   ├── avatar.jpg
-│   │   ├── coursera-logo.png
-│   │   ├── deeplearning-ai-logo.webp
-│   │   ├── iit-bombay-logo.svg
-│   │   └── klu-logo.webp
-│   └── js/
-│       └── main.js
-├── index.html
-├── server.py
-├── vercel.json
-└── README.md
-```
-
-## Notes
-
-- The GitHub Activity chart uses a local Python proxy to avoid GitHub API rate limits and CORS issues.
-- Cloudflare Turnstile site key must be whitelisted for your domain in the Cloudflare dashboard.
-- For production, the Turnstile widget is optional and can be bypassed with the "Continue anyway" button.

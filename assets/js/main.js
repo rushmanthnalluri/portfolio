@@ -34,7 +34,6 @@ function initTheme() {
   } catch (e) {
     // localStorage unavailable
   }
-  // Default to light theme unless the user explicitly chose dark
   const isDark = stored === 'dark';
   applyTheme(isDark);
 }
@@ -43,51 +42,10 @@ initTheme();
 
 if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
 
-// Preloader with Cloudflare Turnstile verification
-const preloader = document.getElementById('preloader');
-const turnstileContainer = document.getElementById('turnstileContainer');
-const turnstileError = document.getElementById('turnstileError');
-const turnstileSkip = document.getElementById('turnstileSkip');
-let turnstileVerified = false;
-
-function hidePreloader() {
-  if (!preloader) return;
-  preloader.classList.add('opacity-0', 'pointer-events-none');
-  setTimeout(() => preloader.remove(), 700);
-}
-
-window.onTurnstileSuccess = function() {
-  turnstileVerified = true;
-  if (turnstileError) turnstileError.classList.add('hidden');
-  if (turnstileSkip) turnstileSkip.classList.add('hidden');
-  setTimeout(hidePreloader, 600);
-};
-
-function showTurnstileError() {
-  if (turnstileError) turnstileError.classList.remove('hidden');
-  if (turnstileSkip) turnstileSkip.classList.remove('hidden');
-}
-
-window.onTurnstileError = showTurnstileError;
-window.onTurnstileExpired = showTurnstileError;
-
-if (turnstileSkip) {
-  turnstileSkip.addEventListener('click', hidePreloader);
-}
-
-// Fallback: if Turnstile fails to load or takes too long, show skip option
-window.addEventListener('load', () => {
-  setTimeout(() => {
-    if (!turnstileVerified && preloader && preloader.parentNode) {
-      showTurnstileError();
-    }
-  }, 5000);
-});
-
-// Live age counter — updates with millisecond precision using requestAnimationFrame
+// Live age counter — updates with millisecond precision
 const liveAge = document.getElementById('liveAge');
 if (liveAge) {
-  const birthDate = new Date('2008-06-25T00:00:00');
+  const birthDate = new Date('2008-01-02T00:00:00');
   const MS_PER_YEAR = 365.25 * 24 * 60 * 60 * 1000;
 
   function updateAge() {
@@ -145,12 +103,11 @@ function showToast(message) {
 if (emailBtn) {
   emailBtn.addEventListener('click', async (e) => {
     e.preventDefault();
-    const email = 'deepthanush1337@icloud.com';
+    const email = 'rushmanth21@gmail.com';
     try {
       await navigator.clipboard.writeText(email);
       showToast('Email copied to clipboard!');
     } catch (err) {
-      // Fallback
       const input = document.createElement('input');
       input.value = email;
       document.body.appendChild(input);
@@ -162,10 +119,10 @@ if (emailBtn) {
   });
 }
 
-// GitHub username used for repos + contribution calendar
-const GITHUB_USER = 'Deepthanush1337';
+// GitHub user configuration
+const GITHUB_USER = 'rushmanthnalluri';
 
-// Fetch GitHub repos for Open Source Work section
+// GitHub open source repos dynamic grid (below Projects as engineering evidence)
 const opensourceGrid = document.getElementById('opensourceGrid');
 
 function createRepoCard(repo) {
@@ -289,7 +246,7 @@ function renderRepos(repos) {
   const nonForks = repos.filter(r => !r.fork);
   const sorted = nonForks
     .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))
-    .slice(0, 3);
+    .slice(0, 6);
   opensourceGrid.innerHTML = '';
   sorted.forEach(repo => {
     opensourceGrid.appendChild(createRepoCard(repo));
@@ -299,12 +256,16 @@ function renderRepos(repos) {
 async function fetchRepos() {
   if (!opensourceGrid) return;
   try {
-    const response = await fetch(`https://api.github.com/users/${GITHUB_USER}/repos?per_page=100&sort=updated`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+    const response = await fetch(`https://api.github.com/users/${GITHUB_USER}/repos?per_page=100&sort=updated`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
     if (!response.ok) throw new Error('GitHub API failed');
     const repos = await response.json();
     renderRepos(repos);
   } catch (e) {
-    console.log('Using fallback repos');
     const fallback = JSON.parse(opensourceGrid.dataset.fallback || '[]');
     renderRepos(fallback.map(r => ({
       name: r.name,
@@ -319,11 +280,7 @@ async function fetchRepos() {
 
 fetchRepos();
 
-// GitHub contribution calendar — fetched client-side on page load.
-// Note: GitHub's official API only exposes the contribution graph through
-// authenticated GraphQL (a token can't be shipped in client JS), so we use
-// the public contributions API, which serves GitHub's exact calendar data
-// (per-day counts, GitHub's own 0-4 levels, and the official yearly total).
+// GitHub contribution calendar — fetched client-side with timeout & graceful static fallback
 const activityTotal = document.getElementById('activityTotal');
 const activityTotalText = document.getElementById('activityTotalText');
 const activityChart = document.getElementById('activityChart');
@@ -335,8 +292,8 @@ const activityDaysLabel = document.getElementById('activityDaysLabel');
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const DAY_LABELS = ['', 'Mon', '', 'Wed', '', 'Fri', ''];
 
-let activityData = null;      // { days: {iso: {count, level}}, total: number }
-let activityState = 'loading'; // 'loading' | 'ready' | 'error'
+let activityData = null;
+let activityState = 'loading';
 
 function getISODate(date) {
   const y = date.getFullYear();
@@ -364,15 +321,13 @@ function createActivityCalendar() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Responsive sizing: fit as many week columns as possible at a comfortable
-  // cell size (capped at a full year), then stretch cells to fill the width.
   const isMobile = window.innerWidth < 640;
   const gap = isMobile ? 3 : 4;
-  const labelWidth = isMobile ? 16 : 20; // matches .activity-days-label width
+  const labelWidth = isMobile ? 16 : 20;
   const chartWidth = activityChart.clientWidth || activityChart.getBoundingClientRect().width;
   const available = Math.max(0, chartWidth - labelWidth - gap);
   const minDay = isMobile ? 9 : 10;
-  const maxWeeks = 53; // full year
+  const maxWeeks = 53;
   let totalWeeks = Math.floor((available + gap) / (minDay + gap));
   totalWeeks = Math.max(4, Math.min(maxWeeks, totalWeeks));
   const daySize = Math.max(minDay, Math.floor((available - (totalWeeks - 1) * gap) / totalWeeks));
@@ -388,14 +343,12 @@ function createActivityCalendar() {
   activityGrid.innerHTML = '';
   activityDaysLabel.innerHTML = '';
 
-  // Day labels
   DAY_LABELS.forEach(label => {
     const span = document.createElement('span');
     span.textContent = label;
     activityDaysLabel.appendChild(span);
   });
 
-  // Last column is the current (partial) week ending today — no future cells.
   const startDate = new Date(today);
   startDate.setDate(startDate.getDate() - startDate.getDay() - (totalWeeks - 1) * 7);
 
@@ -416,7 +369,6 @@ function createActivityCalendar() {
   }
   if (currentWeek.length) weeks.push(currentWeek);
 
-  // Month labels — each label spans the week columns it covers
   const monthSpans = [];
   weeks.forEach(week => {
     const month = parseInt(week[0].date.split('-')[1], 10) - 1;
@@ -435,14 +387,12 @@ function createActivityCalendar() {
     textSpan.textContent = MONTH_NAMES[span.month];
     monthEl.appendChild(textSpan);
     monthEl.style.width = `calc(${span.count} * var(--activity-day) + ${span.count - 1} * var(--activity-gap))`;
-    // Hide labels that only cover a sliver of a month to avoid overlap
     if (span.count <= 1 && (index === 0 || index === monthSpans.length - 1)) {
       textSpan.style.visibility = 'hidden';
     }
     activityMonths.appendChild(monthEl);
   });
 
-  // Grid
   weeks.forEach(week => {
     const weekEl = document.createElement('div');
     weekEl.className = 'activity-week';
@@ -456,26 +406,30 @@ function createActivityCalendar() {
     activityGrid.appendChild(weekEl);
   });
 
-  // Total pill — always GitHub's official yearly total, independent of how
-  // many weeks are visible at the current screen size.
   if (activityTotalText) {
-    if (activityState === 'ready' && activityData) {
+    if (activityState === 'ready' && activityData && activityData.total > 0) {
       activityTotalText.textContent = `${activityData.total.toLocaleString()} contributions in the last year`;
     } else if (activityState === 'error') {
-      activityTotalText.textContent = 'Contributions unavailable';
+      activityTotalText.textContent = 'Active on GitHub (rushmanthnalluri)';
     } else {
-      activityTotalText.textContent = 'Loading...';
+      activityTotalText.textContent = 'Active on GitHub (rushmanthnalluri)';
     }
   }
 }
 
 async function fetchGitHubActivity() {
   if (!activityChart) return;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3500);
+
   try {
-    const response = await fetch(`https://github-contributions-api.jogruber.de/v4/${GITHUB_USER}?y=last`);
-    if (!response.ok) throw new Error(`Contributions API failed: ${response.status}`);
+    const response = await fetch(`https://github-contributions-api.jogruber.de/v4/${GITHUB_USER}?y=last`, {
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) throw new Error(`Contributions API status: ${response.status}`);
     const data = await response.json();
-    if (!Array.isArray(data.contributions)) throw new Error('Unexpected contributions API response');
+    if (!Array.isArray(data.contributions)) throw new Error('Invalid data');
 
     const days = {};
     let sum = 0;
@@ -488,14 +442,14 @@ async function fetchGitHubActivity() {
     activityData = { days, total };
     activityState = 'ready';
   } catch (e) {
-    console.error('GitHub contributions fetch failed:', e);
+    clearTimeout(timeoutId);
     activityState = 'error';
+    activityData = { days: {}, total: 0 };
   }
   createActivityCalendar();
-  setActivityStatus(activityState === 'ready');
+  setActivityStatus(true);
 }
 
-// Re-render on any size change so the calendar always fits its container.
 let activityResizeTimer = null;
 function handleActivityResize() {
   clearTimeout(activityResizeTimer);
@@ -509,20 +463,17 @@ if (activityChart) {
   }
 }
 
-// Render empty skeleton immediately so the chart is never blank,
-// then fetch live data and update.
 createActivityCalendar();
 fetchGitHubActivity();
 
-// Skills filtering — All Skills excludes Libraries to keep the list clean
+// Skills filtering
 const filterButtons = document.querySelectorAll('.filter-btn');
 const skillTags = document.querySelectorAll('.skill-tag');
 
 function animateSkillFilter(visibleTags) {
   visibleTags.forEach((tag, index) => {
     tag.classList.remove('skill-animate-in');
-    tag.style.animationDelay = `${index * 0.06}s`;
-    // Force reflow so animation restarts
+    tag.style.animationDelay = `${index * 0.04}s`;
     void tag.offsetWidth;
     tag.classList.add('skill-animate-in');
   });
@@ -539,9 +490,7 @@ filterButtons.forEach(btn => {
       const category = tag.dataset.category;
       let show = false;
       if (filter === 'all') {
-        show = category !== 'libraries';
-      } else if (filter === 'libraries') {
-        show = category === 'libraries';
+        show = true;
       } else {
         show = category === filter;
       }
@@ -552,7 +501,3 @@ filterButtons.forEach(btn => {
     animateSkillFilter(visibleTags);
   });
 });
-
-// Trigger initial All Skills filter (hide libraries)
-const allSkillsBtn = document.querySelector('.filter-btn[data-filter="all"]');
-if (allSkillsBtn) allSkillsBtn.click();
